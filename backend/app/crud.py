@@ -1,10 +1,18 @@
 import uuid
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 
 from app.core.security import get_password_hash, verify_password
-from app.models import Item, ItemCreate, User, UserCreate, UserUpdate
+from app.models import (
+    Category,
+    CategoryCreate,
+    Item,
+    ItemCreate,
+    User,
+    UserCreate,
+    UserUpdate,
+)
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -66,3 +74,23 @@ def create_item(*, session: Session, item_in: ItemCreate, owner_id: uuid.UUID) -
     session.commit()
     session.refresh(db_item)
     return db_item
+
+
+def create_category(
+    *, session: Session, category_in: CategoryCreate, owner_id: uuid.UUID
+) -> Category:
+    db_category = Category.model_validate(category_in, update={"owner_id": owner_id})
+    session.add(db_category)
+    session.commit()
+    session.refresh(db_category)
+    return db_category
+
+
+def get_category_by_name(
+    *, session: Session, owner_id: uuid.UUID, name: str
+) -> Category | None:
+    statement = select(Category).where(
+        Category.owner_id == owner_id,
+        func.lower(Category.name) == name.strip().lower(),
+    )
+    return session.exec(statement).first()

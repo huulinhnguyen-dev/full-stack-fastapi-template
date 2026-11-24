@@ -46,6 +46,23 @@ export const columns: ColumnDef<DataTableFeatures, ItemPublic>[] = [
     ),
   },
   {
+    id: "category",
+    header: "Category",
+    cell: ({ row }) => {
+      const categoryName = row.original.category?.name
+      return (
+        <span
+          className={cn(
+            "max-w-xs truncate block text-muted-foreground",
+            !categoryName && "italic",
+          )}
+        >
+          {categoryName || "No category"}
+        </span>
+      )
+    },
+  },
+  {
     accessorKey: "description",
     header: "Description",
     cell: ({ row }) => {

@@ -1,7 +1,9 @@
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
-from pydantic import EmailStr
+from pydantic import EmailStr, field_validator
+from sqlalchemy import Index, text
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -53,6 +55,9 @@ class User(UserBase, table=True):
     hashed_password: str
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
     items: list[Item] = Relationship(back_populates="owner", cascade_delete=True)
+    categories: list[Category] = Relationship(
+        back_populates="owner", cascade_delete=True
+    )
 
 
 # Properties to return via API, id is always required
@@ -67,6 +72,52 @@ class UsersPublic(SQLModel):
 
 
 # Shared properties
+class CategoryBase(SQLModel):
+    name: str = Field(min_length=1, max_length=255)
+
+
+# Properties to receive on category creation
+class CategoryCreate(CategoryBase):
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, value: Any) -> Any:
+        # Strip before length checks so whitespace-only names are rejected
+        return value.strip() if isinstance(value, str) else value
+
+
+# Database model, database table inferred from class name
+class Category(CategoryBase, table=True):
+    # Names are unique per owner, ignoring case
+    __table_args__ = (
+        Index(
+            "uq_category_owner_id_lower_name",
+            "owner_id",
+            text("lower(name)"),
+            unique=True,
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime | None = Field(default_factory=get_datetime_utc)
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    owner: User | None = Relationship(back_populates="categories")
+
+
+# Properties to return via API, id is always required
+class CategoryPublic(CategoryBase):
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    created_at: datetime | None = None
+
+
+class CategoriesPublic(SQLModel):
+    data: list[CategoryPublic]
+    count: int
+
+
+# Shared properties
 class ItemBase(SQLModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
@@ -74,13 +125,15 @@ class ItemBase(SQLModel):
 
 # Properties to receive on item creation
 class ItemCreate(ItemBase):
-    pass
+    category_id: uuid.UUID | None = None
 
 
 # Properties to receive on item update
 class ItemUpdate(SQLModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
+    # Explicit null clears the category; omitting the field leaves it unchanged
+    category_id: uuid.UUID | None = None
 
 
 # Database model, database table inferred from class name
@@ -91,6 +144,14 @@ class Item(ItemBase, table=True):
         foreign_key="user.id", nullable=False, ondelete="CASCADE"
     )
     owner: User | None = Relationship(back_populates="items")
+    category_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="category.id",
+        nullable=True,
+        ondelete="SET NULL",
+        index=True,
+    )
+    category: Category | None = Relationship()
 
 
 # Properties to return via API, id is always required
@@ -98,6 +159,8 @@ class ItemPublic(ItemBase):
     id: uuid.UUID
     owner_id: uuid.UUID
     created_at: datetime | None = None
+    category_id: uuid.UUID | None = None
+    category: CategoryPublic | None = None
 
 
 class ItemsPublic(SQLModel):

@@ -6,6 +6,10 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { type ItemCreate, ItemsService } from "@/client"
+import CategorySelect, {
+  isStaleCategoryError,
+  STALE_CATEGORY_MESSAGE,
+} from "@/components/Categories/CategorySelect"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -33,6 +37,7 @@ import { handleError } from "@/utils"
 const formSchema = z.object({
   title: z.string().min(1, { message: "Title is required" }),
   description: z.string().optional(),
+  category_id: z.string().nullable(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -49,6 +54,7 @@ const AddItem = () => {
     defaultValues: {
       title: "",
       description: "",
+      category_id: null,
     },
   })
 
@@ -59,7 +65,15 @@ const AddItem = () => {
       form.reset()
       setIsOpen(false)
     },
-    onError: handleError.bind(showErrorToast),
+    onError: (err) => {
+      if (isStaleCategoryError(err)) {
+        showErrorToast(STALE_CATEGORY_MESSAGE)
+        form.setValue("category_id", null)
+        queryClient.invalidateQueries({ queryKey: ["categories"] })
+        return
+      }
+      handleError.call(showErrorToast, err)
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["items"] })
     },
@@ -117,6 +131,21 @@ const AddItem = () => {
                     <FormControl>
                       <Input placeholder="Description" type="text" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="category_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <CategorySelect
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                     <FormMessage />
                   </FormItem>
                 )}

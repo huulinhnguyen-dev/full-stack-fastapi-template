@@ -1,6 +1,8 @@
-import { expect, test } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
+import { chooseCategory, createCategory } from "./utils/category"
 import { createUser } from "./utils/privateApi"
 import {
+  randomCategoryName,
   randomEmail,
   randomItemDescription,
   randomItemTitle,
@@ -128,5 +130,103 @@ test.describe("Items empty state", () => {
 
     await expect(page.getByText("You don't have any items yet")).toBeVisible()
     await expect(page.getByText("Add a new item to get started")).toBeVisible()
+  })
+})
+
+async function addItem(page: Page, title: string, categoryName?: string) {
+  await page.goto("/items")
+  await page.getByRole("button", { name: "Add Item" }).click()
+  await page.getByLabel("Title").fill(title)
+  if (categoryName) {
+    await chooseCategory(page, categoryName)
+  }
+  await page.getByRole("button", { name: "Save" }).click()
+  await expect(page.getByRole("dialog")).not.toBeVisible()
+}
+
+async function editItemCategory(page: Page, title: string, option: string) {
+  const itemRow = page.getByRole("row").filter({ hasText: title })
+  await itemRow.getByRole("button").last().click()
+  await page.getByRole("menuitem", { name: "Edit Item" }).click()
+  await chooseCategory(page, option)
+  await page.getByRole("button", { name: "Save" }).click()
+  await expect(page.getByText("Item updated successfully")).toBeVisible()
+}
+
+test.describe("Item categories", () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test.beforeEach(async ({ page }) => {
+    const email = randomEmail()
+    const password = randomPassword()
+    await createUser({ email, password })
+    await logInUser(page, email, password)
+  })
+
+  test("Create an item with a category", async ({ page }) => {
+    const categoryName = randomCategoryName()
+    const title = randomItemTitle()
+    await createCategory(page, categoryName)
+
+    await addItem(page, title, categoryName)
+
+    await expect(
+      page.getByRole("columnheader", { name: "Category" }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole("row").filter({ hasText: title }),
+    ).toContainText(categoryName)
+  })
+
+  test("Create an item without a category", async ({ page }) => {
+    const title = randomItemTitle()
+    await createCategory(page, randomCategoryName())
+
+    await addItem(page, title)
+
+    await expect(
+      page.getByRole("row").filter({ hasText: title }),
+    ).toContainText("No category")
+  })
+
+  test("Assign a category to an existing item", async ({ page }) => {
+    const categoryName = randomCategoryName()
+    const title = randomItemTitle()
+    await createCategory(page, categoryName)
+    await addItem(page, title)
+
+    await editItemCategory(page, title, categoryName)
+
+    await expect(
+      page.getByRole("row").filter({ hasText: title }),
+    ).toContainText(categoryName)
+  })
+
+  test("Clear the category from an item", async ({ page }) => {
+    const categoryName = randomCategoryName()
+    const firstTitle = randomItemTitle()
+    const secondTitle = randomItemTitle()
+    await createCategory(page, categoryName)
+    await addItem(page, firstTitle, categoryName)
+    await addItem(page, secondTitle, categoryName)
+
+    await editItemCategory(page, firstTitle, "No category")
+
+    await expect(
+      page.getByRole("row").filter({ hasText: firstTitle }),
+    ).toContainText("No category")
+    await expect(
+      page.getByRole("row").filter({ hasText: secondTitle }),
+    ).toContainText(categoryName)
+  })
+
+  test("Category picker is disabled when the user has no categories", async ({
+    page,
+  }) => {
+    await page.goto("/items")
+    await page.getByRole("button", { name: "Add Item" }).click()
+
+    await expect(page.getByLabel("Category", { exact: true })).toBeDisabled()
+    await expect(page.getByText("No categories yet")).toBeVisible()
   })
 })

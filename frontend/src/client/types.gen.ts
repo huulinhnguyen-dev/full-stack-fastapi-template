@@ -35,6 +35,52 @@ export type Body_login_login_access_token = {
 };
 
 /**
+ * CategoriesPublic
+ */
+export type CategoriesPublic = {
+    /**
+     * Data
+     */
+    data: Array<CategoryPublic>;
+    /**
+     * Count
+     */
+    count: number;
+};
+
+/**
+ * CategoryCreate
+ */
+export type CategoryCreate = {
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
+ * CategoryPublic
+ */
+export type CategoryPublic = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Owner Id
+     */
+    owner_id: string;
+    /**
+     * Created At
+     */
+    created_at?: string | null;
+};
+
+/**
  * HTTPValidationError
  */
 export type HTTPValidationError = {
@@ -56,6 +102,10 @@ export type ItemCreate = {
      * Description
      */
     description?: string | null;
+    /**
+     * Category Id
+     */
+    category_id?: string | null;
 };
 
 /**
@@ -82,6 +132,11 @@ export type ItemPublic = {
      * Created At
      */
     created_at?: string | null;
+    /**
+     * Category Id
+     */
+    category_id?: string | null;
+    category?: CategoryPublic | null;
 };
 
 /**
@@ -96,6 +151,10 @@ export type ItemUpdate = {
      * Description
      */
     description?: string | null;
+    /**
+     * Category Id
+     */
+    category_id?: string | null;
 };
 
 /**
@@ -920,6 +979,95 @@ export type itemsUpdateItemResponses = {
 };
 
 export type itemsUpdateItemResponse = itemsUpdateItemResponses[keyof itemsUpdateItemResponses];
+
+export type categoriesReadCategoriesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Skip
+         */
+        skip?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/categories/';
+};
+
+export type categoriesReadCategoriesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type categoriesReadCategoriesError = categoriesReadCategoriesErrors[keyof categoriesReadCategoriesErrors];
+
+export type categoriesReadCategoriesResponses = {
+    /**
+     * Successful Response
+     */
+    200: CategoriesPublic;
+};
+
+export type categoriesReadCategoriesResponse = categoriesReadCategoriesResponses[keyof categoriesReadCategoriesResponses];
+
+export type categoriesCreateCategoryData = {
+    body: CategoryCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/categories/';
+};
+
+export type categoriesCreateCategoryErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type categoriesCreateCategoryError = categoriesCreateCategoryErrors[keyof categoriesCreateCategoryErrors];
+
+export type categoriesCreateCategoryResponses = {
+    /**
+     * Successful Response
+     */
+    200: CategoryPublic;
+};
+
+export type categoriesCreateCategoryResponse = categoriesCreateCategoryResponses[keyof categoriesCreateCategoryResponses];
+
+export type categoriesDeleteCategoryData = {
+    body?: never;
+    path: {
+        /**
+         * Id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/categories/{id}';
+};
+
+export type categoriesDeleteCategoryErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type categoriesDeleteCategoryError = categoriesDeleteCategoryErrors[keyof categoriesDeleteCategoryErrors];
+
+export type categoriesDeleteCategoryResponses = {
+    /**
+     * Successful Response
+     */
+    200: Message;
+};
+
+export type categoriesDeleteCategoryResponse = categoriesDeleteCategoryResponses[keyof categoriesDeleteCategoryResponses];
 
 export type privateCreateUserData = {
     body: PrivateUserCreate;
